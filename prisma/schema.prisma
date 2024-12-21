@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  firstName       String   @db.VarChar(32)
+  lastName        String   @db.VarChar(32)
+  email           String   @unique @db.VarChar(128)
+  password        String   @db.VarChar(255)
+  phoneNumber     String   @db.VarChar(20)
+  profileImageUrl String?  @db.VarChar(255)
+  role            UserRole @default(CUSTOMER)
+  reviews         Review[] @relation("UserReviews")
+}
+
+model TattooImage {
+  id         Int    @id @default(autoincrement())
+  style      String
+  imageUrl   String
+  pageNumber Int
+}
+
+model Artist {
+  id               String        @id @default(cuid())
+  firstName        String        @db.VarChar(32)
+  lastName         String        @db.VarChar(32)
+  description      String        @db.VarChar(512)
+  artistImageUrl   String?       @db.VarChar(255)
+  nickName         String?       @db.VarChar(32)
+  works            ArtistWork[]  @relation("ArtistWorks")
+  bookings         Booking[]     @relation("ArtistBookings")
+  dayOffs          DayOff[]      @relation("ArtistDayOffs")
+  reviews          Review[]      @relation("ArtistReviews")
+  unavailabilities Unavailable[] @relation("ArtistUnavailabilities")
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  artistId      String
+  date          DateTime
+  time          String
+  createdAt     DateTime      @default(now())
+  customerEmail String?
+  customerName  String
+  customerPhone String
+  updatedAt     DateTime      @updatedAt
+  status        WorkTimeStatus @default(booked)
+  artist        Artist        @relation("ArtistBookings", fields: [artistId], references: [id])
+}
+
+model DayOff {
+  id        String        @id @default(cuid())
+  artistId  String
+  date      DateTime
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    WorkTimeStatus @default(dayOff)
+  artist    Artist        @relation("ArtistDayOffs", fields: [artistId], references: [id])
+}
+
+model Unavailable {
+  id        String        @id @default(cuid())
+  artistId  String
+  date      DateTime
+  time      String
+  reason    String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    WorkTimeStatus @default(unavailable)
+  artist    Artist        @relation("ArtistUnavailabilities", fields: [artistId], references: [id])
+}
+
+model ArtistWork {
+  id       String @id @default(cuid())
+  artistId String
+  workUrl  String @db.VarChar(255)
+  artist   Artist @relation("ArtistWorks", fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  artistId  String
+  userId    String
+  rating    Int      @default(0)
+  comment   String?  @db.VarChar(1024)
+  createdAt DateTime @default(now())
+  artist    Artist   @relation("ArtistReviews", fields: [artistId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([artistId], map: "idx_review_artist")
+  @@index([userId], map: "idx_review_user")
+}
+
+model FormData {
+  id        String     @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  message   String
+  createdAt DateTime   @default(now())
+  status    FormStatus @default(new)
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  GUEST
+}
+
+enum FormStatus {
+  new
+  processed
+  in_progress
+}
+
+enum WorkTimeStatus {
+  booked
+  dayOff
+  unavailable
+}
